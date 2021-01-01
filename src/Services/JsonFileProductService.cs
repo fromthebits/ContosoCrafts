@@ -7,58 +7,52 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace ContosoCrafts.WebSite.Services
 {
-   public class JsonFileProductService
+    public class JsonFileProductService
     {
         public JsonFileProductService(IWebHostEnvironment webHostEnvironment)
         {
             WebHostEnvironment = webHostEnvironment;
         }
 
-        public IWebHostEnvironment WebHostEnvironment { get; }
+        private IWebHostEnvironment WebHostEnvironment { get; }
 
-        private string JsonFileName
-        {
-            get { return Path.Combine(WebHostEnvironment.WebRootPath, "data", "products.json"); }
-        }
+        private string JsonFileName => Path.Combine(WebHostEnvironment.WebRootPath, "data", "products.json");
 
         public IEnumerable<Product> GetProducts()
         {
-            using(var jsonFileReader = File.OpenText(JsonFileName))
-            {
-                return JsonSerializer.Deserialize<Product[]>(jsonFileReader.ReadToEnd(),
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-            }
+            using var jsonFileReader = File.OpenText(JsonFileName);
+            return JsonSerializer.Deserialize<Product[]>(jsonFileReader.ReadToEnd(),
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
         }
 
         public void AddRating(string productId, int rating)
         {
             var products = GetProducts();
+            var product = products.First(x => x.Id == productId);
 
-            if(products.First(x => x.Id == productId).Ratings == null)
+            if (product.Ratings == null)
             {
-                products.First(x => x.Id == productId).Ratings = new int[] { rating };
+                product.Ratings = new int[] { rating };
             }
             else
             {
-                var ratings = products.First(x => x.Id == productId).Ratings.ToList();
+                var ratings = product.Ratings.ToList();
                 ratings.Add(rating);
-                products.First(x => x.Id == productId).Ratings = ratings.ToArray();
+                product.Ratings = ratings.ToArray();
             }
 
-            using(var outputStream = File.OpenWrite(JsonFileName))
-            {
-                JsonSerializer.Serialize<IEnumerable<Product>>(
-                    new Utf8JsonWriter(outputStream, new JsonWriterOptions
-                    {
-                        SkipValidation = true,
-                        Indented = true
-                    }), 
-                    products
-                );
-            }
+            using var outputStream = File.OpenWrite(JsonFileName);
+            JsonSerializer.Serialize<IEnumerable<Product>>(
+                new Utf8JsonWriter(outputStream, new JsonWriterOptions
+                {
+                    SkipValidation = true,
+                    Indented = true
+                }),
+                products
+            );
         }
     }
 
